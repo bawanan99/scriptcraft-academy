@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ScriptCraft: Master Penmanship</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500&family=Lexend:wght@400&family=Patrick+Hand&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- APP STYLING --- */
+        :root {
+            --primary: #4a90e2;
+            --accent: #f5a623;
+            --paper: #fdfdfd;
+            --line-blue: #aecbfa;
+            --line-red: #ffb7b7;
+            --ink: #2c3e50;
+        }
+
+        body {
+            font-family: 'Lexend', sans-serif; /* Updated UI Font */
+            background-color: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+            overscroll-behavior: none;
+        }
+
+        h1 { color: var(--ink); margin-bottom: 10px; }
+
+        /* Controls Area */
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        select, button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            cursor: pointer;
+            background: white;
+            transition: all 0.2s;
+            font-family: 'Lexend', sans-serif; /* consistent UI font */
+        }
+
+        button.primary {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            font-weight: bold;
+        }
+
+        button.danger {
+            background-color: #ff6b6b;
+            color: white;
+            border-color: #ff6b6b;
+        }
+
+        /* The Writing Stage */
+        .stage-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            height: 400px;
+            background-color: var(--paper);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            border-radius: 4px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+        }
+
+        /* Layers */
+        .layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; 
+        }
+
+        /* 1. The Lined Paper Background */
+        .guidelines {
+            background-image: 
+                linear-gradient(to bottom, 
+                    var(--line-blue) 1px, transparent 1px, 
+                    transparent calc(50% - 1px), var(--line-red) calc(50% - 1px), var(--line-red) calc(50% + 1px), transparent calc(50% + 1px), 
+                    transparent calc(100% - 2px), var(--line-blue) calc(100% - 2px), var(--line-blue) 100% 
+                );
+            background-size: 100% 33.33%;
+            opacity: 0.6;
+            z-index: 1;
+        }
+        
+        .midline-overlay {
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 16.5%,
+                #ffb7b7 16.5%,
+                #ffb7b7 16.8%,
+                transparent 16.8%,
+                transparent 49.8%,
+                #ffb7b7 49.8%,
+                #ffb7b7 50.1%,
+                transparent 50.1%,
+                transparent 83.1%,
+                #ffb7b7 83.1%,
+                #ffb7b7 83.4%,
+                transparent 83.4%,
+                transparent 100%
+            ); 
+            z-index: 1;
+            opacity: 0.5;
+        }
+
+        /* 2. The Ghost Letter (Tracing Target) */
+        .ghost-text {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 200px; /* Adjusted size for new fonts */
+            color: #e0e0e0;
+            z-index: 2;
+            user-select: none;
+            line-height: 0;
+            padding-bottom: 25px; 
+        }
+
+        /* 3. The Interactive Ink Canvas */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+            cursor: crosshair;
+            touch-action: none; 
+        }
+
+        /* 2. UPDATED FONT CLASSES */
+        .font-manuscript { font-family: 'Lexend', sans-serif; }
+        .font-dneilian { font-family: 'Patrick Hand', cursive; }
+        .font-cursive { font-family: 'Dancing Script', cursive; }
+
+        /* Print Logic */
+        @media print {
+            .controls, h1, .instructions { display: none !important; }
+            body { background: white; padding: 0; }
+            .stage-container { box-shadow: none; border: 2px solid black; height: 100vh; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ScriptCraft Academy</h1>
+    
+    <div class="controls">
+        <select id="styleSelect" onchange="updateStyle()">
+            <option value="font-manuscript">Manuscript (Zaner-Bloser style)</option>
+            <option value="font-dneilian">D'Neilian (Modern style)</option>
+            <option value="font-cursive">Cursive (Classic)</option>
+        </select>
+
+        <select id="contentSelect" onchange="updateContent()">
+            <option value="A">Letter A</option>
+            <option value="B">Letter B</option>
+            <option value="C">Letter C</option>
+            <option value="D">Letter D</option>
+            <option value="cat">Word: cat</option>
+            <option value="dog">Word: dog</option>
+        </select>
+
+        <button class="primary" onclick="window.print()">🖨️ Print Worksheet</button>
+        <button class="danger" onclick="clearCanvas()">❌ Clear Ink</button>
+    </div>
+
+    <div class="stage-container" id="stage">
+        <div class="layer guidelines"></div>
+        <div class="layer midline-overlay"></div>
+        
+        <div id="ghostLayer" class="layer ghost-text font-manuscript">A</div>
+        
+        <canvas id="writeCanvas"></canvas>
+    </div>
+
+    <p style="color: #666; margin-top: 15px;">
+        Works with 🖱️ Mouse and 👆 Touch. Toggle "Print" to create a worksheet!
+    </p>
+
+    <script>
+        // --- APP ENGINE ---
+        const canvas = document.getElementById('writeCanvas');
+        const ctx = canvas.getContext('2d');
+        const ghost = document.getElementById('ghostLayer');
+        const stage = document.getElementById('stage');
+
+        // State
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+
+        // Resize Logic (Responsive)
+        function resizeCanvas() {
+            canvas.width = stage.offsetWidth;
+            canvas.height = stage.offsetHeight;
+            
+            // Re-setup context after resize
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.lineWidth = 12;
+            ctx.strokeStyle = '#2c3e50';
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); // Init
+
+        // --- DRAWING LOGIC (Touch & Mouse) ---
+        
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            // Check if touch event or mouse event
+            if(e.touches) {
+                return {
+                    x: e.touches[0].clientX - rect.left,
+                    y: e.touches[0].clientY - rect.top
+                };
+            } else {
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+            }
+        }
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const pos = getPos(e);
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            e.preventDefault(); // Stop scrolling on touch
+            
+            const pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(lastX, lastY);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            
+            lastX = pos.x;
+            lastY = pos.y;
+        }
+
+        function stopDrawing() {
+            isDrawing = false;
+        }
+
+        // Event Listeners
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stopDrawing);
+
+        // --- UI LOGIC ---
+
+        function updateStyle() {
+            const style = document.getElementById('styleSelect').value;
+            // Remove old font classes
+            ghost.classList.remove('font-manuscript', 'font-dneilian', 'font-cursive');
+            // Add new
+            ghost.classList.add(style);
+        }
+
+        function updateContent() {
+            const content = document.getElementById('contentSelect').value;
+            ghost.innerText = content;
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+    </script>
+</body>
+</html>
